@@ -1,5 +1,6 @@
 from twisted.trial import unittest
 import time
+import errno
 import signal
 import txmpserv.interruptable_thread as T
 
@@ -29,8 +30,11 @@ class TestInterruptableThread(unittest.TestCase):
         thread.join()
 
         self.assertFalse(thread.isAlive())
-        with self.assertRaises(OSError):
+        with self.assertRaises(OSError) as exc_cm:
             thread.interrupt()
+
+        exc = exc_cm.exception
+        self.assertEqual(exc.errno, errno.ESRCH)
 
     def test_interrupt(self):
         thread = T.InterruptableThread(target=lambda: time.sleep(10 << 20))

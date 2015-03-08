@@ -52,8 +52,7 @@ def _pthread_self():
 def _pthread_kill(thread, sig):
     ret = lib._cffi_pthread_kill(thread, sig)
     if ret:
-        raise OSError('[Errno {}] {}'.format(ret,
-                                             os.strerror(ret)))
+        raise OSError(ret, os.strerror(ret))
 
 
 def noop(*args):
