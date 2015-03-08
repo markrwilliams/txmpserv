@@ -1,7 +1,6 @@
 import signal
 import errno
 import socket
-import os
 
 from twisted.internet.tcp import Port
 from twisted.internet import fdesc, error
@@ -19,9 +18,6 @@ class ThreadedAcceptPort(Port):
 
     def __init__(self, *args, **kwargs):
         Port.__init__(self, *args, **kwargs)
-        self.fakeReadable, w = os.pipe()
-        os.close(w)
-        self.fileno = lambda: self.fakeReadable
         self.acceptThread = None
 
     def createInternetSocket(self):
