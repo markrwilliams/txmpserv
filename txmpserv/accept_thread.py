@@ -1,6 +1,7 @@
 import signal
 import errno
 import socket
+import os
 
 from twisted.internet.tcp import Port
 from twisted.internet import fdesc, error
@@ -94,15 +95,13 @@ class ThreadedAcceptPort(Port):
         protocol.makeConnection(transport)
 
     def startReading(self):
+        # this is called after self.startListening, which sets
+        # self.fileno
+        self.fakeFileno, self._writeFakeFileno = os.pipe()
+        self.realFileno, self.fileno = self.fileno, lambda: self.fakeFileno
         self.thread = InterruptableThread(target=self._doAccept)
         self.thread.start()
         Port.startReading(self)
-
-    def doRead(self):
-        # there's a race between the reactor calling this and the
-        # thread waking up.  this may waste some resources, so
-        # consider a different approach
-        return
 
     def stopReading(self):
         try:
@@ -113,6 +112,7 @@ class ThreadedAcceptPort(Port):
         else:
             self.thread.join()
         Port.stopReading(self)
+        os.close(self._writeFakeFileno)
 
 
 def listenTCP(reactor, port, factory, backlog=50, interface='',

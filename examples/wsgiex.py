@@ -17,14 +17,15 @@ def main(fd=None):
     wsgi = WSGIResource(reactor, reactor.getThreadPool(), application)
     factory = server.Site(wsgi)
     prepareSignalHandler()
-
     if fd is None:
         # Create a new listening port and several other processes to help out.
         port = listenTCP(reactor, 8080, factory, willBeShared=True)
-        for i in range(1):
+        for i in range(3):
             reactor.spawnProcess(
-                None, executable, [executable, __file__, str(port.fileno())],
-                childFDs={0: 0, 1: 1, 2: 2, port.fileno(): port.fileno()},
+                None, executable, [executable, __file__,
+                                   str(port.realFileno())],
+                childFDs={0: 0, 1: 1, 2: 2,
+                          port.realFileno(): port.realFileno()},
                 env=environ)
     else:
         # Another process created the port, just start listening on it.
