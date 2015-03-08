@@ -10,7 +10,7 @@ from txmpserv.accept_thread import (prepareSignalHandler, listenTCP,
 
 def application(environ, start_response):
     start_response('200 OK', [('Content-type', 'text/plain')])
-    return ['Hello, world!']
+    return ['Hello, world from %d!' % getpid()]
 
 
 def main(fd=None):
