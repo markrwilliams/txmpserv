@@ -14,9 +14,6 @@ def prepareSignalHandler(sig=InterruptableThread.interruptSignal):
     signal.signal(sig, noop)
 
 
-LOCK = RLock()
-
-
 class ThreadedAcceptPort(Port):
     socketIsShared = False
 
@@ -34,21 +31,19 @@ class ThreadedAcceptPort(Port):
         return s
 
     def _doAccept(self):
-        """Called when my socket is ready for reading.
-
-        This accepts a connection and calls self.protocol() to handle the
-        wire-level protocol.
-        """
         try:
-            numAccepts = self.numberAccepts
-            for i in range(numAccepts):
-                # we need this so we can deal with a factory's buildProtocol
-                # calling our loseConnection
-                if self.disconnecting:
-                    return
+            # disconnecting is apparently set by loseConnection, which
+            # calls stopReading first, which will send a signal to
+            # interrupt this thread.  In the event that we hit this
+            # test before we hit .accept(), go ahead and check for it
+            # as an exit condition.
+            while not self.disconnecting:
                 try:
                     skt, addr = self.socket.accept()
                 except socket.error as e:
+                    # EINTR means we were sent a signal, at the least
+                    # the one this thread responds to;
+                    # EINVAL means this socket was shutdown
                     if e.args[0] in (errno.EINTR, errno.EINVAL):
                         return
                     elif e.args[0] == errno.EPERM:
@@ -82,9 +77,6 @@ class ThreadedAcceptPort(Port):
                 fdesc._setCloseOnExec(skt.fileno())
                 self.reactor.callFromThread(self._finishConnection,
                                             skt, addr)
-            else:
-                with LOCK:
-                    self.numberAccepts = self.numberAccepts+20
         except:
             # Note that in TLS mode, this will possibly catch SSL.Errors
             # raised by self.socket.accept()
@@ -124,12 +116,13 @@ class ThreadedAcceptPort(Port):
                 raise
         else:
             self.thread.join()
+        Port.stopReading(self)
 
 
 def listenTCP(reactor, port, factory, backlog=50, interface='',
-              willBeshared=False):
+              willBeShared=False):
     p = ThreadedAcceptPort(port, factory, backlog, interface, reactor)
-    p.socketIsShared = willBeshared
+    p.socketIsShared = willBeShared
     p.startListening()
     return p
 
