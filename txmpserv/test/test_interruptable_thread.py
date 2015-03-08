@@ -1,7 +1,7 @@
 from twisted.trial import unittest
 import time
 import signal
-import txta.interruptable_thread as T
+import txmpserv.interruptable_thread as T
 
 
 class TestInterruptableThread(unittest.TestCase):
