@@ -72,6 +72,7 @@ class ThreadedAcceptPort(Port):
                     raise
 
                 fdesc._setCloseOnExec(skt.fileno())
+                skt.setblocking(0)
                 self.reactor.callFromThread(self._finishConnection,
                                             skt, addr)
         except:

@@ -28,8 +28,10 @@ def main(fd=None):
         port = listenTCP(reactor, 8080, factory, willBeShared=True)
         for i in range(8):
             reactor.spawnProcess(
-                None, executable, [executable, __file__, str(port.fileno())],
-                childFDs={0: 0, 1: 1, 2: 2, port.fileno(): port.fileno()},
+                None, executable, [executable, __file__,
+                                   str(port.realFileno())],
+                childFDs={0: 0, 1: 1, 2: 2,
+                          port.realFileno(): port.realFileno()},
                 env=environ)
     else:
         # Another process created the port, just start listening on it.
