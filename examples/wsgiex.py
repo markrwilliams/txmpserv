@@ -3,30 +3,25 @@ from sys import argv, executable
 from socket import AF_INET
 from twisted.web import server, resource
 from twisted.internet import reactor
+from twisted.web.wsgi import WSGIResource
 from txmpserv.accept_thread import (prepareSignalHandler, listenTCP,
                                     adoptStreamPort)
 
 
-class Counter(resource.Resource):
-    isLeaf = True
-    numberRequests = 0
-
-    def render_GET(self, request):
-        self.numberRequests += 1
-        request.setHeader("content-type", "text/plain")
-        return "I am %s and this is request #%s\n" % (getpid(),
-                                                      str(self.numberRequests))
+def application(environ, start_response):
+    start_response('200 OK', [('Content-type', 'text/plain')])
+    return ['Hello, world!']
 
 
 def main(fd=None):
-    counter = Counter()
-    factory = server.Site(counter)
+    wsgi = WSGIResource(reactor, reactor.getThreadPool(), application)
+    factory = server.Site(wsgi)
     prepareSignalHandler()
 
     if fd is None:
         # Create a new listening port and several other processes to help out.
         port = listenTCP(reactor, 8080, factory, willBeShared=True)
-        for i in range(8):
+        for i in range(1):
             reactor.spawnProcess(
                 None, executable, [executable, __file__, str(port.fileno())],
                 childFDs={0: 0, 1: 1, 2: 2, port.fileno(): port.fileno()},
@@ -36,7 +31,6 @@ def main(fd=None):
         port = adoptStreamPort(reactor, fd, AF_INET, factory)
 
     reactor.run()
-    print getpid(), counter.numberRequests
 
 
 if __name__ == '__main__':
